@@ -10,7 +10,7 @@ from models.SpaTrackV2.utils.model_utils import bilinear_sampler
 from models.SpaTrackV2.models.blocks import CrossAttnBlock as CrossAttnBlock_F
 from torch.nn.functional import scaled_dot_product_attention
 from torch.nn.attention import sdpa_kernel, SDPBackend
-# import flash_attn
+#import flash_attn
 EPS = 1e-6
 
 
@@ -382,7 +382,7 @@ class Attention(nn.Module):
                 # print(f"q.shape: {q.shape}, dtype: {q.dtype}, device: {q.device}")
                 # print(f"Flash SDP available: {torch.backends.cuda.flash_sdp_enabled()}")
                 # print(f"Flash SDP allowed: {torch.backends.cuda.enable_flash_sdp}")
-                with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=False, enable_mem_efficient=False):
+                with torch.backends.cuda.sdp_kernel(enable_flash=True, enable_math=True, enable_mem_efficient=True):
                     x = F.scaled_dot_product_attention(*input_args).permute(0,2,1,3).reshape(B,N1,-1)  # type: ignore
             except Exception as e:
                 print(e)

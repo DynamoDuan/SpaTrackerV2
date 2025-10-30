@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Union, Optional
 import cv2
 import os
-import decord
+#import decord
 from huggingface_hub import PyTorchModelHubMixin  # used for model hub
 
 class Predictor(torch.nn.Module, PyTorchModelHubMixin):
@@ -30,6 +30,7 @@ class Predictor(torch.nn.Module, PyTorchModelHubMixin):
         self.spatrack.to(device)
         if self.spatrack.base_model is not None:
             self.spatrack.base_model.to(device)
+        return self
 
     def forward(self, video: str|torch.Tensor|np.ndarray,
                  depth: str|torch.Tensor|np.ndarray=None,
@@ -45,12 +46,12 @@ class Predictor(torch.nn.Module, PyTorchModelHubMixin):
         queries: (B, N, 2)
         """
 
-        if isinstance(video, str):
-            video = decord.VideoReader(video)
-            video = video[::fps].asnumpy()  # Convert to numpy array
-            video = np.array(video)  # Ensure numpy array
-            video = torch.from_numpy(video).permute(0, 3, 1, 2).float()
-        elif isinstance(video, np.ndarray):
+       # if isinstance(video, str):
+       #     video = decord.VideoReader(video)
+       #     video = video[::fps].asnumpy()  # Convert to numpy array
+       #     video = np.array(video)  # Ensure numpy array
+       #     video = torch.from_numpy(video).permute(0, 3, 1, 2).float()
+        if isinstance(video, np.ndarray):
             video = torch.from_numpy(video).float()
 
         if isinstance(depth, np.ndarray):

@@ -209,23 +209,24 @@ class SpaTrack2(nn.Module, PyTorchModelHubMixin):
         #TODO: Process each segment in parallel using torch.nn.DataParallel
         c2w_traj = torch.eye(4, 4)[None].repeat(T, 1, 1)
         intrs_out = torch.eye(3, 3)[None].repeat(T, 1, 1)
-        point_map = torch.zeros(T, 3, H, W).cuda()
-        unc_metric = torch.zeros(T, H, W).cuda()
+
+        point_map = torch.zeros(T, 3, H, W, device=video_unf.device)
+        unc_metric = torch.zeros(T, H, W, device=video_unf.device)
         # set the queries
         N, _ = queries.shape
-        track3d_pred = torch.zeros(T, N, 6).cuda()
-        track2d_pred = torch.zeros(T, N, 3).cuda()
-        vis_pred = torch.zeros(T, N, 1).cuda()
-        conf_pred = torch.zeros(T, N, 1).cuda()
-        dyn_preds = torch.zeros(T, N, 1).cuda()
+        track3d_pred = torch.zeros(T, N, 6, device=video_unf.device)
+        track2d_pred = torch.zeros(T, N, 3, device=video_unf.device)
+        vis_pred = torch.zeros(T, N, 1, device=video_unf.device)
+        conf_pred = torch.zeros(T, N, 1, device=video_unf.device)
+        dyn_preds = torch.zeros(T, N, 1, device=video_unf.device)
         # sort the queries by time
         sorted_indices = np.argsort(queries[...,0])
         sorted_inv_indices = np.argsort(sorted_indices)
         sort_query = queries[sorted_indices]
-        sort_query = torch.from_numpy(sort_query).cuda()
+        sort_query = torch.from_numpy(sort_query).to(video_unf.device)
         if queries_3d is not None:
             sort_query_3d = queries_3d[sorted_indices]
-            sort_query_3d = torch.from_numpy(sort_query_3d).cuda()
+            sort_query_3d = torch.from_numpy(sort_query_3d).to(video_unf.device)
         
         queries_len = 0
         overlap_d = None
@@ -233,7 +234,7 @@ class SpaTrack2(nn.Module, PyTorchModelHubMixin):
         loss = 0.0
 
         for i in range(B):
-            segment = video_unf[i:i+1].cuda()
+            segment = video_unf[i:i+1].to(video_unf.device)
             # Forward pass through model
             # detect the key points for each frames
                             
@@ -564,11 +565,11 @@ class SpaTrack2(nn.Module, PyTorchModelHubMixin):
                 traj3d = annots['traj_3d']
                 if (kwargs.get('stage', 0)==1) and (annots.get("custom_vid", False)==False):
                     support_pts_q = get_track_points(H_resize, W_resize,
-                                                    T, x.device, query_size=self.track_num // 2,
+                                                    T, video_unf.device, query_size=self.track_num // 2,
                                                     support_frame=self.support_frame, unc_metric=unc_metric, mode="incremental")[None]
                 else:
                     support_pts_q = get_track_points(H_resize, W_resize,
-                                                    T, x.device, query_size=random.randint(32, 256),
+                                                    T, video_unf.device, query_size=random.randint(32, 256),
                                                     support_frame=self.support_frame, unc_metric=unc_metric, mode="incremental")[None]
                 if pts_q is not None:
                     pts_q = pts_q[None,None]
@@ -597,7 +598,7 @@ class SpaTrack2(nn.Module, PyTorchModelHubMixin):
         if regular_track:
             if pts_q is None:
                 pts_q = get_track_points(H_resize, W_resize,
-                                            T, x.device, query_size=self.track_num,
+                                            T, imgs_raw.device, query_size=self.track_num,
                                             support_frame=self.support_frame, unc_metric=unc_metric, mode="incremental" if self.training else "incremental")[None]
                 support_pts_q = None
             else:
@@ -625,7 +626,7 @@ class SpaTrack2(nn.Module, PyTorchModelHubMixin):
                             pts_q = torch.cat([pts_q, pts_q[:,:,pad_pts,:]], dim=-2)
 
                 support_pts_q = get_track_points(H_resize, W_resize,
-                                            T, x.device, query_size=self.track_num,
+                                            T, imgs_raw.device, query_size=self.track_num,
                                             support_frame=self.support_frame,
                                             unc_metric=unc_metric, mode="mixed")[None]
 
@@ -678,8 +679,8 @@ class SpaTrack2(nn.Module, PyTorchModelHubMixin):
                 traj_est[..., 1] *= H / H_resize
                 vis_est = ret_track['vis_pred']
             else:
-                traj_est = torch.zeros(B, self.track_num // 2, 3).to(x.device)
-                vis_est = torch.zeros(B, self.track_num // 2).to(x.device)
+                traj_est = torch.zeros(B, self.track_num // 2, 3).to(imgs_raw.device)
+                vis_est = torch.zeros(B, self.track_num // 2).to(imgs_raw.device)
 
             if intrs is not None:
                 intrs[..., 0, :] *= W / W_resize

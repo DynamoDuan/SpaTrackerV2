@@ -89,7 +89,7 @@ if __name__ == "__main__":
         mask = cv2.resize(mask, (video_tensor.shape[3], video_tensor.shape[2]))
         mask = mask.sum(axis=-1)>0
     else:
-        mask = np.ones_like(video_tensor[0,0].numpy())>0
+        mask = np.ones_like(video_tensor[0,0].numpy())
         
     # get all data pieces
     viz = True
